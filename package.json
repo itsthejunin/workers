@@ -5,7 +5,14 @@
   "scripts": {
     "server": "bun run server.ts",
     "worker": "bun run src/worker/run.ts",
-    "build:ui": "cd packages/workbench && vite build"
+    "build:ui": "cd packages/workbench && vite build",
+    "dev": "bun run server.ts",
+    "start": "bun run server.ts",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "open:workbench": "open http://localhost:3000/admin",
+    "lint": "bunx eslint src/",
+    "lint:fix": "bunx eslint src/ --fix",
+    "typecheck": "bunx tsc --noEmit"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
@@ -18,5 +25,10 @@
     "rate-limiter-flexible": "^11.1.0",
     "rate-limiter-redis": "^1.0.0",
     "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.0",
+    "eslint": "^8.57.0",
+    "open": "^11.0.0"
   }
 }
