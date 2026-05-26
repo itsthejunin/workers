@@ -1,0 +1,17 @@
+{
+  "name": "boilerplate-jobs",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "server": "bun run server.ts",
+    "worker": "bun run src/worker/run.ts",
+    "build:ui": "cd packages/workbench && vite build"
+  },
+  "dependencies": {
+    "bullmq": "^5.34.8",
+    "hono": "^4.6.17",
+    "@hono/node-server": "^1.13.7",
+    "ioredis": "^5.4.1",
+    "zod": "^3.24.1"
+  }
+}
