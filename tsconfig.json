@@ -9,7 +9,13 @@
     "baseUrl": ".",
     "paths": {
       "@boilerplate/*": ["./src/*"],
-      "@workbench/*": ["./packages/workbench/src/*"]
+      "@workbench/*": ["./packages/workbench/src/*"],
+      "@utils/*": ["./src/utils/*"],
+      "@middleware/*": ["./src/middleware/*"],
+      "@config/*": ["./src/config/*"],
+      "@health/*": ["./src/health/*"],
+      "@queue/*": ["./src/queue/*"],
+      "@services/*": ["./src/services/*"]
     }
   }
 }
