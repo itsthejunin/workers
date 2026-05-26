@@ -1,7 +1,7 @@
 import { Job } from "bullmq";
 import { z } from "zod";
 
-export abstract class BaseProcessor<T = any> {
+export abstract class BaseProcessor<T> {
   abstract schema: z.ZodSchema<T>;
   abstract handle(job: Job<T>): Promise<void>;
 

@@ -1,4 +1,5 @@
 import { Queue } from "bullmq";
+import { JOBS } from "@boilerplate/shared/jobs";
 
 const REDIS_CONFIG = { host: "localhost", port: 6380 };
 
@@ -9,12 +10,12 @@ const queues = {
 };
 
 export const jobDisposer = {
-  sendEmail: (data: { to: string; subject: string }) => 
-    queues.email.add("send-email", data),
+  sendEmail: (data: typeof JOBS.EMAIL.schema._type, jobId?: string) => 
+    queues.email.add(JOBS.EMAIL.name, data, { jobId }),
     
-  processPdf: (data: { documentId: string }) => 
-    queues.documents.add("process-pdf", data),
+  processPdf: (data: typeof JOBS.PDF.schema._type, jobId?: string) => 
+    queues.documents.add(JOBS.PDF.name, data, { jobId }),
     
-  syncMetrics: (data: { value: number }) => 
-    queues.metrics.add("sync-metrics", data),
+  syncMetrics: (data: typeof JOBS.METRICS.schema._type, jobId?: string) => 
+    queues.metrics.add(JOBS.METRICS.name, data, { jobId }),
 };
