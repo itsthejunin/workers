@@ -56,24 +56,24 @@ export function workbench(options: WorkbenchOptions | Queue[]): Hono {
     return c.json(core.getConfig());
   });
 
-  // Serve static assets from built UI
-  app.get("/assets/:file", async (c) => {
-    const fileName = c.req.param("file");
-    const filePath = join(UI_DIST_PATH, "assets", fileName);
+    // Serve static assets from built UI
+    app.get("/assets/:file", async (c) => {
+      const fileName = c.req.param("file");
+      const filePath = join(UI_DIST_PATH, "assets", fileName);
 
-    if (!existsSync(filePath)) {
-      return c.text("Not found", 404);
-    }
+      if (!existsSync(filePath)) {
+        return c.text("Not found", 404);
+      }
 
-    const content = readFileSync(filePath);
-    const contentType = fileName.endsWith(".js")
-      ? "application/javascript"
-      : fileName.endsWith(".css")
-        ? "text/css"
-        : "application/octet-stream";
+      const content = readFileSync(filePath);
+      const contentType = fileName.endsWith(".js")
+        ? "application/javascript"
+        : fileName.endsWith(".css")
+          ? "text/css"
+          : "application/octet-stream";
 
-    return c.body(content, 200, { "Content-Type": contentType });
-  });
+      return c.body(content, 200, { "Content-Type": contentType });
+    });
 
   // Serve index.html for all other routes (SPA)
   app.get("*", async (c) => {

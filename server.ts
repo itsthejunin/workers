@@ -19,7 +19,8 @@ const app = new Hono();
 // Middleware
 app.use('*', requestLogger());
 app.use('*', errorHandler());
-app.use('*', securityHeaders());
+// Apply security headers only to API routes (not static assets)
+app.use('/admin*', securityHeaders());
 // Apply rate limiting, but skip health checks and static assets
 app.use('*', rateLimiterMiddleware(['/health', '/health/ready', '/admin/assets']));
 
@@ -50,10 +51,6 @@ app.get("/health/ready", async (c) => {
 });
 
 // Workbench
-app.use("/admin/assets/*", serveStatic({
-  root: "./packages/workbench/dist/ui",
-  rewriteRequestPath: (path) => path.replace(/^\/admin/, ""),
-}));
 app.route("/admin", workbench({
   queues: Object.values(queues),
   title: "Boilerplate Workbench",
