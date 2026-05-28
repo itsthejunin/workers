@@ -1,67 +1,40 @@
 import { Queue } from 'bullmq';
-import { env } from '../config';
+import { loadQueueConfigs, type QueueConfig } from '../config/queues';
+import { getRedisConnection } from '../utils/redis-connection';
 import logger from '../utils/logger.ts';
 
-/**
- * Queue configuration
- */
-export interface QueueConfig {
-  name: string;
-  defaultJobOptions?: {
-    attempts?: number;
-    backoff?: {
-      type: 'fixed' | 'exponential';
-      delay: number;
-    };
-    removeOnComplete?: boolean;
-    removeOnFail?: number; // Keep this many failed jobs
-  };
-}
+function initQueue(config: QueueConfig): Queue {
+  const connection = getRedisConnection();
 
-/**
- * Default queue configuration
- */
-const defaultQueueConfig: QueueConfig = {
-  name: '',
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 1000, // 1 second
+  logger.info(
+    { queue: config.name, concurrency: config.workerConcurrency, priority: config.priority },
+    `Initializing queue: ${config.name}`
+  );
+
+  return new Queue(config.name, {
+    connection: connection as any,
+    defaultJobOptions: {
+      attempts: config.attempts,
+      backoff: config.backoff,
+      removeOnComplete: config.removeOnComplete,
+      removeOnFail: config.removeOnFail,
+      priority: config.priority,
     },
-    removeOnComplete: true, // Remove successful jobs to keep Redis clean
-    removeOnFail: 1000, // Keep up to 1000 failed jobs for inspection
-  },
-};
-
-/**
- * Initialize a BullMQ queue with the given configuration
- */
-export function initQueue(config: QueueConfig): Queue {
-  const { name, defaultJobOptions } = { ...defaultQueueConfig, ...config };
-  const connection = {
-    host: env.REDIS_HOST,
-    port: env.REDIS_PORT,
-  };
-
-  logger.info(`Initializing queue: ${name}`, { host: env.REDIS_HOST, port: env.REDIS_PORT });
-
-  return new Queue(name, {
-    connection,
-    defaultJobOptions,
   });
 }
 
-/**
- * Initialize all queues used by the application
- */
 export function initAllQueues(): Record<string, Queue> {
-  const queues = {
-    email: initQueue({ name: 'email-queue' }),
-    documents: initQueue({ name: 'doc-queue' }),
-    metrics: initQueue({ name: 'metrics-queue' }),
-  };
+  const queueConfigs = loadQueueConfigs();
+  const queues: Record<string, Queue> = {};
 
-  logger.info('All queues initialized', { queueNames: Object.keys(queues) });
+  for (const [queueName, config] of Object.entries(queueConfigs)) {
+    queues[queueName] = initQueue(config);
+  }
+
+  logger.info({ queueNames: Object.keys(queues) }, 'All queues initialized');
   return queues;
+}
+
+export function getQueueConfigs(): Record<string, QueueConfig> {
+  return loadQueueConfigs();
 }

@@ -1,7 +1,7 @@
 import pino from 'pino';
+import os from 'os';
 import { env } from '../config/index.ts';
 
-// Define custom levels if needed, but pino has standard ones
 const logger = pino({
   level: env.LOG_LEVEL || 'info',
   transport:
@@ -13,7 +13,6 @@ const logger = pino({
           },
         }
       : undefined,
-  // Add timestamp and hostname
   formatters: {
     level(label) {
       return { level: label };
@@ -21,11 +20,14 @@ const logger = pino({
   },
   base: {
     pid: process.pid,
-    hostname: require('os').hostname(),
+    hostname: os.hostname(),
+  },
+  redact: {
+    paths: ['req.headers.authorization', 'req.headers.cookie', 'body.password', 'body.token'],
+    censor: '[REDACTED]',
   },
 });
 
-// Create a child logger with request ID for HTTP requests
 export function createRequestLogger(requestId: string) {
   return logger.child({ requestId });
 }

@@ -15,7 +15,7 @@ export function createWorker(config: QueueConfig) {
       if (!processor) {
         throw new Error(`No processor registered for job: ${job.name}`);
       }
-      return processor.handle(job);
+      return processor.validateAndHandle(job);
     },
     config.workerOptions
   );

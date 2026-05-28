@@ -1,39 +1,76 @@
 import { Worker } from "bullmq";
 import { processorRegistry } from "../registry";
+import { featureFlags } from "../config/featureFlags";
+import { getQueueConfigs } from "../queue/init";
+import { getRedisConnection } from "../utils/redis-connection";
+import { startTelemetryReporter } from "../system/telemetry";
+import { recordJobStart, recordJobEnd } from "../metrics";
+import logger from "../utils/logger.ts";
 
-const REDIS_CONFIG = { host: "localhost", port: 6380 };
+const connection = getRedisConnection();
+const queueConfigs = getQueueConfigs();
 
-const workerConfigs = [
-  { name: "email-queue", concurrency: 5 },
-  { name: "doc-queue", concurrency: 1 },
-  { name: "metrics-queue", concurrency: 10 },
-];
-
-const workers = workerConfigs.map((config) => {
+const workers = Object.values(queueConfigs).map((config) => {
   const worker = new Worker(
     config.name,
     async (job) => {
       const processor = processorRegistry[job.name];
       if (!processor) throw new Error(`Processador ausente: ${job.name}`);
-      // Agora usamos o método com validação Zod
-      return processor.validateAndHandle(job);
+
+      recordJobStart(config.name);
+      const startTime = Date.now();
+
+      try {
+        const result = await processor.validateAndHandle(job);
+        const duration = Date.now() - startTime;
+        recordJobEnd(config.name, true, duration);
+        logger.info(
+          { queue: config.name, jobId: job.id, durationMs: duration },
+          `Job completed`
+        );
+        return result;
+      } catch (err) {
+        const duration = Date.now() - startTime;
+        recordJobEnd(config.name, false, duration);
+        throw err;
+      }
     },
-    { connection: REDIS_CONFIG, concurrency: config.concurrency }
+    { connection: connection as any, concurrency: config.workerConcurrency }
   );
 
-  worker.on("failed", (job, err) => console.error(`[Fatal] Job ${job?.id} falhou:`, err));
+  worker.on("failed", (job, err) => {
+    logger.error(
+      { queue: config.name, jobId: job?.id, error: err.message, attempt: job?.attemptsMade },
+      `[DLQ] Job falhou após todas as tentativas`
+    );
+  });
+
+  worker.on("error", (err) => {
+    logger.error({ queue: config.name, error: err.message }, `[Worker Error]`);
+  });
+
   return worker;
 });
 
-// Tratamento de erros globais
-process.on("unhandledRejection", (err) => console.error("Unhandled Rejection:", err));
-process.on("uncaughtException", (err) => console.error("Uncaught Exception:", err));
+if (featureFlags.enableTelemetry) {
+  const queueNames = Object.keys(queueConfigs);
+  startTelemetryReporter(queueNames);
+}
 
-// Graceful Shutdown dos workers
+process.on("unhandledRejection", (err) => {
+  logger.error({ error: String(err) }, "Unhandled Rejection");
+});
+
+process.on("uncaughtException", (err) => {
+  logger.error({ error: err.message }, "Uncaught Exception");
+  process.exit(1);
+});
+
 const shutdown = async () => {
-  console.log("Worker fechando conexões...");
+  logger.info("Worker fechando conexões...");
   await Promise.all(workers.map(w => w.close()));
   process.exit(0);
 };
+
 process.on("SIGTERM", shutdown);
 process.on("SIGINT", shutdown);

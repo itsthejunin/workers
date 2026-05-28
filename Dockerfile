@@ -33,7 +33,7 @@ EXPOSE 3000
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD bun run healthcheck || exit 1
+  CMD bun run healthcheck.mjs || exit 1
 
 # Start the application
 CMD ["bun", "run", "server.ts"]
